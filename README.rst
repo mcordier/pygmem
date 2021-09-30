@@ -10,7 +10,7 @@
 
 .. |PythonMinVersion| replace:: 3.7
 
-.. image:: doc/logos/pygmem-logo.png
+.. image:: doc/logos/pygmem-logo.jpg
 
 **pygmem** is a Python module for generalized (non linear) mixed effect models for statistical learning tasks built on top of pytorch. There are no inference of the variance like in more statistically oriented libraries. 
 
