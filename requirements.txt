@@ -1,15 +1,7 @@
 numpy
 scipy
-scikit-learn
 pandas
-networkx
-pyparsing
 torch
-statsmodels
 tqdm
 matplotlib
 numpy
-celery
-redis
-rabbitMQ
-xgboost
