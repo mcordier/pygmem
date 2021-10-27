@@ -76,7 +76,8 @@ class GMEM():
         n_groups,
         theta=lambda x: x,
         enc_in=[], enc_out=[],
-        max_iterations=1
+        max_iterations=1,
+        criterion = torch.nn.MSELoss(reduction='sum')
     ):
         self.n_groups = n_groups
         self.enc_in = enc_in
@@ -89,7 +90,7 @@ class GMEM():
             self.model = networks.LinearMixedEffects_fast(n_X, n_Z, n_groups)
 
         self.theta = theta
-        self.criterion = torch.nn.MSELoss()
+        self.criterion = criterion
         self.max_iterations = max_iterations
 
     def predict(self, df, X, Z, groups):
@@ -104,9 +105,9 @@ class GMEM():
             eta_hat = self.model(x, z, str(group_id.item()))
             y_pred = self.theta(eta_hat)
             res.append(y_pred[0].item())
-            loss = self.criterion(y_pred, y)
-            running_loss += loss.item()  # *len(sample_batched)
-        print('running_loss:' + str(running_loss))
+            # loss = self.criterion(y_pred, y)
+            # running_loss += loss.item()  # *len(sample_batched)
+        # print('running_loss:' + str(running_loss))
         return(np.array(res))
 
     def fit(
@@ -167,7 +168,7 @@ class GMEM():
         train_dataloader_r = generate_dataloader_indexed(dataset)
         self.train(train_dataloader_f, train_dataloader_r, lr_f, lr_r, epochs)
         if visualize:
-            for i in dataset.unique_idx:
+            for i in dataset.grp_unique_ids:
                 plt.scatter(dataset.x[np.where(groups == i), 0],
                             dataset.y[np.where(groups == i)], label='y_true')
                 plt.scatter(dataset.x[np.where(groups == i), 0],
@@ -257,19 +258,17 @@ class GMEM():
             running_loss = 0.0
             # Forward pass. Te batch samples should be from the same userId.
             for i_batch, sample_batched in enumerate(train_dataloader):
-                # print(i_batch)
                 x, z, y, group_id = sample_batched['x'], sample_batched[
                     'z'], sample_batched['y'], sample_batched['group_ids']
                 optimizer.zero_grad()
-                # self.model.linear_f(x)
                 eta_hat = self.model(x, z, str(group_id[0].item()))
                 y_pred = self.theta(eta_hat)
-                loss = self.criterion(y_pred, y)  # Backward pass
-                eta_hat.backward(1.0/len(sample_batched) * (y_pred - y))
+                loss = self.criterion(y_pred, y)
+                eta_hat.backward(1.0/len(sample_batched) * (y_pred - y)) # Backward pass
                 # loss.backward()
                 optimizer.step()
                 running_loss += loss.item()  # *len(sample_batched)
-            iters.set_postfix_str(s=str(running_loss), refresh=True)
+            iters.set_postfix_str(s=str(running_loss/len(train_dataloader.dataset)), refresh=True)
 
     def train_r(self, train_dataloader, epochs, optimizer):
         """
@@ -305,7 +304,7 @@ class GMEM():
                 # loss.backward()
                 optimizer[group_id[0]].step()
                 running_loss += loss.item()*len(sample_batched)
-            iters.set_postfix_str(s=str(running_loss), refresh=True)
+            iters.set_postfix_str(s=str(running_loss/len(train_dataloader.dataset)), refresh=True)
 
     @staticmethod
     def get_model_path(model_dir, step=0):
