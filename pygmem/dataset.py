@@ -30,10 +30,10 @@ class Dataset_gmem(Dataset):
     ----------
 
     """
-    def __init__(self, data, X, Z, groups, y, transform=None):
+    def __init__(self, data, X, Z, group_ids, y, transform=None):
         """
         """
-        self.unique_idx = np.unique(groups)
+        self.grp_unique_ids = np.unique(group_ids)
         self.data = data
         if isinstance(data, pd.DataFrame):
             # X, Z and Y needs to be list of columns or a column
@@ -50,7 +50,7 @@ class Dataset_gmem(Dataset):
         self.y = torch.tensor(self.y,  dtype=torch.float32).unsqueeze(-1)
         self.x = torch.tensor(self.x, dtype=torch.float32)
         self.z = torch.tensor(self.z, dtype=torch.float32)
-        self.group_ids = torch.tensor(groups, dtype=torch.long)
+        self.group_ids = torch.tensor(group_ids, dtype=torch.long)
         self.transform = transform
 
     def __len__(self):
@@ -90,17 +90,17 @@ class Dataset_simulated(Dataset):
             n_samples=100, transform=None, nl_fun=None):
         """
         """
-        self.group_index = np.unique(group_ids)
+        self.grp_unique_ids = np.unique(group_ids)
         self.data = np.random.normal(-0.5, 0.2, size=(n_samples, n_features))
         self.x = self.data[:, X]
         self.z = self.data[:, Z]  # decide poisson theta values
         self.linear_f = np.random.randint(0, 1, size=len(X))-3
         self.linear_m = np.random.random(
-            size=(len(Z), len(self.group_index)))*2-1
+            size=(len(Z), len(self.grp_unique_ids)))*2-1
         self.y = np.zeros((n_samples))
         self.y_hat = np.zeros((n_samples))
 
-        for i in self.group_index:
+        for i in self.grp_unique_ids:
             if nl_fun is not None:
                 self.y[np.where(group_ids == i)] = nl_fun(
                     self.x[np.where(group_ids == i), :][0].dot(
@@ -144,15 +144,15 @@ class BatchGroupSampler(Sampler):
     (same index OID/OR/DEST). Do not use this one, because it is
     slower.'''
 
-    def __init__(self, userIds_list, userIds_uniques):
-        self.userIds_list = userIds_list
-        self.userIds_uniques = userIds_uniques
+    def __init__(self, group_index, grp_unique_ids):
+        self.group_index = group_index
+        self.grp_unique_ids = grp_unique_ids
 
     def __iter__(self):
-        random_sampling = np.random.permutation(self.userIds_uniques)
+        random_sampling = np.random.permutation(self.grp_unique_ids)
         batch = []
         for k in random_sampling:
-            batch = list(np.where(self.userIds_list == k))[0]
+            batch = list(np.where(self.group_index == k))[0]
             yield batch
 
 
@@ -161,19 +161,19 @@ class BatchGroupSampler_fast(Sampler):
     Pytorch Sampler which create batches with the same userId
     (same index OID/OR/DEST). Use this one because it is faster.'''
 
-    def __init__(self, group_index, userIds_uniques):
+    def __init__(self, group_index, grp_unique_ids):
         self.group_index = group_index
-        self.userIds_uniques = userIds_uniques
+        self.grp_unique_ids = grp_unique_ids
 
     def __iter__(self):
-        random_sampling = np.random.permutation(self.userIds_uniques)
+        random_sampling = np.random.permutation(self.grp_unique_ids)
         batch = []
         for k in random_sampling:
             batch = self.group_index[k]
             yield batch
 
     def __len__(self):
-        return(int(len(self.userIds_uniques)))
+        return(int(len(self.grp_unique_ids)))
 
 
 def generate_dataloader_indexed(dataset):
@@ -193,20 +193,20 @@ def generate_dataloader_indexed(dataset):
     '''
 
     # Train loaders by batch of same iDs
-    userIds_list = np.array(dataset.group_ids)
-    userIds_uniques = np.array(dataset.group_ids.unique())
+    group_ids = np.array(dataset.group_ids)
+    grp_unique_ids = np.array(dataset.group_ids.unique())
 
     # Create a list of the index (userId) of each value for the sampler
-    group_index = np.empty((userIds_uniques.max()+1,), dtype=object)
+    group_index = np.empty((grp_unique_ids.max()+1,), dtype=object)
     # list of list of indexes per Ids_unique
-    for (i, user) in enumerate(tqdm(userIds_list)):
+    for (i, user) in enumerate(tqdm(group_ids)):
         if group_index[user] == None:
             group_index[user] = [i]
         else:
             group_index[user].append(i)
 
     # Sampler Creation
-    sampler = BatchGroupSampler_fast(group_index, userIds_uniques)
+    sampler = BatchGroupSampler_fast(group_index, grp_unique_ids)
     # sampler = BatchGroupSampler(userIds_list, userIds_uniques)
     dataloader_idx = DataLoader(dataset, batch_sampler=sampler,
                                 num_workers=0)

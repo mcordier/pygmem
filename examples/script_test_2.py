@@ -55,5 +55,5 @@ model.fit(df, ['week'], ['week'], df.id.values, 'weight', visualize=True)
 # Non Linear Model
 model = GMEM(1, 1, max(np.unique(df.id.values))+1,
              enc_in=[1, 4], enc_out=[4, 30, 1])  # theta=torch.exp
-model.fit(df, ['week'], ['week'], df.id.values, 'concentration',
+model.fit(df, ['week'], ['week'], df.id.values, 'weight',
           lr_f=0.005, visualize=True)
