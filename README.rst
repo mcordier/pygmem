@@ -14,13 +14,9 @@
 
 **pygmem** is a Python module for generalized (non linear) mixed effect models for statistical learning tasks built on top of pytorch. There are no inference of the variance like in more statistically oriented libraries. 
 
-The library is written with pytorch, and is only working with only one type of group (individualized prediction regarding one type of group). 
+The library is written with pytorch and there is only one type of group parametring (individualized prediction regarding one type of group).  It's designed for larger dataset usecases (Netflix, LinkedIn) compared to more statistical regression approaches. There is an option for non-linear cases (input-encoder, for images for example, and a decoder). For those non linear models, the mixed-effect are learned on a intermediary layer, where the individualised parameters are defined.
 
-It's designed for a usecase with large dataset (Netflix, LinkedIn), compared to a more statistical regression approach.
-
-There is an option for non-linear cases, with a possible input-encoder (for images), and also a decoder, and the mixed-effect model would be done on linearized intermediary space
-
-You also choose the type of regression you choose to do (Gaussian, Poisson, Binary prediction) by choosing an ouput function theta.
+You can also choose the type of regression you want (Gaussian, Poisson, Binary prediction) by choosing an ouput function theta.
 
 It is currently maintained by mcordier.
 
