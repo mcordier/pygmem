@@ -49,11 +49,11 @@ df['id'] = df['id'].astype('category')
 df[['id']]  = df[['id']].apply(lambda x: x.cat.codes)
 
 # Linear Model
-model = GMEM(1, 1, max(np.unique(df.id.values))+1) #, theta=torch.exp
-model.fit(df, ['week'], ['week'], df.id.values, 'weight', visualize=True)
+# model = GMEM() #, theta=torch.exp
+# model.fit(df, ['week'], [['week']], [df.id.values], 'weight',
+#           visualize=True, epochs=2000, lr_f=0.005, lr_r=0.005)
 
 # Non Linear Model
-model = GMEM(1, 1, max(np.unique(df.id.values))+1,
-             enc_in=[1, 4], enc_out=[4, 30, 1])  # theta=torch.exp
-model.fit(df, ['week'], ['week'], df.id.values, 'weight',
-          lr_f=0.005, visualize=True)
+model = GMEM(enc_in=[1, 5], enc_out=[5, 30, 1])  # theta=torch.exp
+model.fit(df, ['week'], [['week']], [df.id.values], 'weight',
+          lr_f=0.005, visualize=True, epochs=3000)

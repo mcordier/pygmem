@@ -39,8 +39,6 @@ cess.
 """
 print(__doc__)
 
-
-
 import numpy as np
 import pandas as pd
 import torch
@@ -55,12 +53,11 @@ df['id'] = df['id'].astype('category')
 df[['id']] = df[['id']].apply(lambda x: x.cat.codes)
 
 # Linear Model
-model = GMEM(2, 1, max(np.unique(df.id.values))+1)  # theta=torch.exp
-model.fit(df, ['time', 'weight'], ['time'],
-          df.id.values, 'concentration', visualize=True)
+# model = GMEM()  # theta=torch.exp
+# model.fit(df, ['time', 'weight'], [['time']],
+#           [df.id.values], 'concentration', visualize=True)
 
 # Non Linear Model
-model = GMEM(1, 1, max(np.unique(df.id.values))+1,
-             enc_in=[1, 4], enc_out=[4, 30, 1])  # theta=torch.exp
-model.fit(df, ['time'], ['time'], df.id.values, 'concentration',
-          lr_f=0.005, visualize=True)
+model = GMEM(enc_in=[1, 4], enc_out=[2, 30, 1])  # theta=torch.exp
+model.fit(df, ['time'], [['time']], [df.id.values], 'concentration',
+          lr_f=0.005, visualize=True, epochs=2000)
