@@ -33,23 +33,26 @@ class Dataset_gmem(Dataset):
     def __init__(self, data, X, Z, group_ids, y, transform=None):
         """
         """
-        self.grp_unique_ids = np.unique(group_ids)
+        self.grp_unique_ids = np.unique(group_ids, axis=1)
         self.data = data
         if isinstance(data, pd.DataFrame):
             # X, Z and Y needs to be list of columns or a column
             self.x = self.data[X].values
-            self.z = self.data[Z].values
+            self.z = [self.data[z].values for z in Z]
             self.y = self.data[y].values
         elif isinstance(data, np.array):
             # X, Z and Y needs to be list of integers
             self.x = self.data[:, X]
-            self.z = self.data[:, Z]
+            self.z = [self.data[:, z] for z in Z]
             self.y = self.data[:, y]
         else:
             raise Exception('not good data type')
         self.y = torch.tensor(self.y,  dtype=torch.float32).unsqueeze(-1)
         self.x = torch.tensor(self.x, dtype=torch.float32)
-        self.z = torch.tensor(self.z, dtype=torch.float32)
+        self.z = [torch.tensor(z, dtype=torch.float32) for z in self.z]
+        self.z = self.pad_tensors(self.z)
+        self.z = torch.transpose(self.z, 0, 1)
+        print(self.z.size())
         self.group_ids = torch.tensor(group_ids, dtype=torch.long)
         self.transform = transform
 
@@ -57,13 +60,42 @@ class Dataset_gmem(Dataset):
         return len(self.data)
 
     def __getitem__(self, idx):
+        group_ids_idx = [self.group_ids[i,idx]
+                    for i in range(len(self.group_ids))]
         sample = {'x': self.x[idx], 'y': self.y[idx],
-                  'z': self.z[idx], 'group_ids': self.group_ids[idx]}
+                  'z': self.z[idx], 'group_ids': group_ids_idx}
 
         if self.transform:
             sample = self.transform(sample)
 
         return sample
+
+    def pad_tensors(self, tensors):
+        """
+        Takes a list of `N` M-dimensional tensors (M<4) and returns a padded tensor.
+
+        The padded tensor is `M+1` dimensional with size `N, S1, S2, ..., SM`
+        where `Si` is the maximum value of dimension `i` amongst all tensors.
+        """
+        rep = tensors[0]
+        padded_dim = []
+        for dim in range(rep.dim()):
+            max_dim = max([tensor.size(dim) for tensor in tensors])
+            padded_dim.append(max_dim)
+        padded_dim = [len(tensors)] + padded_dim
+        padded_tensor = torch.zeros(padded_dim)
+        padded_tensor = padded_tensor.type_as(rep)
+        for i, tensor in enumerate(tensors):
+            size = list(tensor.size())
+            if len(size) == 1:
+                padded_tensor[i, :size[0]] = tensor
+            elif len(size) == 2:
+                padded_tensor[i, :size[0], :size[1]] = tensor
+            elif len(size) == 3:
+                padded_tensor[i, :size[0], :size[1], :size[2]] = tensor
+            else:
+                raise ValueError('Padding is supported for upto 3D tensors at max.')
+        return padded_tensor
 
 
 class Dataset_simulated(Dataset):
@@ -194,20 +226,22 @@ def generate_dataloader_indexed(dataset):
 
     # Train loaders by batch of same iDs
     group_ids = np.array(dataset.group_ids)
-    grp_unique_ids = np.array(dataset.group_ids.unique())
+    grp_unique_ids = np.array(dataset.grp_unique_ids)
+    dataloaders_idx = []
 
-    # Create a list of the index (userId) of each value for the sampler
-    group_index = np.empty((grp_unique_ids.max()+1,), dtype=object)
-    # list of list of indexes per Ids_unique
-    for (i, user) in enumerate(tqdm(group_ids)):
-        if group_index[user] == None:
-            group_index[user] = [i]
-        else:
-            group_index[user].append(i)
+    for i in range(len(grp_unique_ids)):
+        # Create a list of the index (userId) of each value for the sampler
+        group_index = np.empty((grp_unique_ids[i].max()+1,), dtype=object)
+        # list of list of indexes per Ids_unique
+        for (j, user) in enumerate(tqdm(group_ids[i])):
+            if group_index[user] == None:
+                group_index[user] = [j]
+            else:
+                group_index[user].append(j)
 
-    # Sampler Creation
-    sampler = BatchGroupSampler_fast(group_index, grp_unique_ids)
-    # sampler = BatchGroupSampler(userIds_list, userIds_uniques)
-    dataloader_idx = DataLoader(dataset, batch_sampler=sampler,
-                                num_workers=0)
-    return(dataloader_idx)
+        # Sampler Creation
+        sampler = BatchGroupSampler_fast(group_index, grp_unique_ids[i])
+        # sampler = BatchGroupSampler(userIds_list, userIds_uniques)
+        dataloaders_idx.append(DataLoader(dataset, batch_sampler=sampler,
+                                    num_workers=0))
+    return(dataloaders_idx)

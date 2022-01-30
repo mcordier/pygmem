@@ -1,0 +1,22 @@
+Metadata-Version: 2.1
+Name: pygmem
+Version: 0.1.1
+Summary: A library for fast General Mixed Effect Models (GMEM) leaning and prediction
+Home-page: https://github.com/pygmem/pygmem
+Author: Matthieu Cordier
+Author-email: matt.cordier.95@gmail.com
+License: Open Source
+Description: UNKNOWN
+Platform: UNKNOWN
+Classifier: Programming Language :: Python :: 3.6
+Classifier: Programming Language :: Python :: 3.7
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Intended Audience :: Research
+Classifier: Operating System :: Unix
+Classifier: Operating System :: POSIX
+Classifier: Operating System :: Microsoft :: Windows
+Classifier: Operating System :: MacOS
+Classifier: Topic :: Scientific/Engineering
+Classifier: Topic :: Scientific/Engineering :: Machine Learning
+Classifier: Topic :: Scientific/Engineering :: Mixed Effects Models
+Description-Content-Type: text/markdown

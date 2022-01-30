@@ -1,0 +1,17 @@
+MANIFEST.in
+README.txt
+setup.py
+pygmem/__init__.py
+pygmem/dataset.py
+pygmem/gmem.py
+pygmem/kaggle.py
+pygmem/networks.py
+pygmem/script_test.py
+pygmem/script_test_2.py
+pygmem/utils.py
+pygmem.egg-info/PKG-INFO
+pygmem.egg-info/SOURCES.txt
+pygmem.egg-info/dependency_links.txt
+pygmem.egg-info/requires.txt
+pygmem.egg-info/top_level.txt
+pygmem/test/__init__.py
